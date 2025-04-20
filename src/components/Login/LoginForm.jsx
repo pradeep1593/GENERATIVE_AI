@@ -35,6 +35,10 @@ const LoginForm = ({ onLogin }) => {
 
       if (response.ok) {
         console.log('Login successful:', data);
+
+        // Store the username in localStorage
+        localStorage.setItem('username', username); // Storing the logged-in username
+
         onLogin(); // Notify App about successful login
         navigate('/'); // Redirect to the main page
       } else {
@@ -59,7 +63,6 @@ const LoginForm = ({ onLogin }) => {
         backgroundImage: `url(${bgImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        // backgroundRepeat: 'no-repeat',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',

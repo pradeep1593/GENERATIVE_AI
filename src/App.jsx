@@ -1,79 +1,42 @@
-
-// import React, { useState, useEffect } from 'react';
-// import { BrowserRouter, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
-// import LoginForm from './components/Login/LoginForm';
-// import SignupForm from './components/Login/SignupForm';
-// import Home from './Home';
-
-// const App = () => {
-//   const [isLoggedIn, setIsLoggedIn] = useState(false); // Track login state
-
-//   const handleLogin = () => {
-//     console.log('App: User logged in'); // Debug log
-//     setIsLoggedIn(true); // Update login state
-//   };
-
-//   return (
-//     <BrowserRouter>
-//       <Routes>
-//         <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
-//         <Route path="/signup" element={<SignupForm />} />
-//         <Route
-//           path="/"
-//           element={
-//             isLoggedIn ? (
-//               <div style={{ 
-//                 display: 'flex',
-//                 flex: 1,
-//                 minHeight: '100vh',
-//                 paddingBottom: '15vh',
-//                 position: 'relative',
-//                }}>
-//                 <Home />
-//               </div>
-//             ) : (
-//               <Navigate to="/login" replace />
-//             )
-//           }
-//         />
-//       </Routes>
-//     </BrowserRouter>
-//   );
-// };
-
-// export default App;
-
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import LoginForm from './components/Login/LoginForm';
 import SignupForm from './components/Login/SignupForm';
 import Home from './Home';
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true); // NEW
 
-  // Check login status from localStorage on component mount
   useEffect(() => {
     const loggedInStatus = localStorage.getItem('isLoggedIn') === 'true';
     setIsLoggedIn(loggedInStatus);
+    setLoading(false); // Mark done
   }, []);
 
   const handleLogin = () => {
     console.log('App: User logged in');
     setIsLoggedIn(true);
-    localStorage.setItem('isLoggedIn', 'true'); // Persist login status
+    localStorage.setItem('isLoggedIn', 'true');
   };
 
   const handleLogout = () => {
     console.log('App: User logged out');
     setIsLoggedIn(false);
-    localStorage.removeItem('isLoggedIn'); // Clear login status
+    localStorage.removeItem('isLoggedIn');
   };
+
+  if (loading) return null; // or a spinner while checking localStorage
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
+        <Route
+          path="/login"
+          element={
+            isLoggedIn ? <Navigate to="/" replace /> : <LoginForm onLogin={handleLogin} />
+          }
+        />
         <Route path="/signup" element={<SignupForm />} />
         <Route
           path="/"
@@ -88,7 +51,7 @@ const App = () => {
                   position: 'relative',
                 }}
               >
-                <Home onLogout={handleLogout} />
+                <Home   onLogout={handleLogout} />
               </div>
             ) : (
               <Navigate to="/login" replace />

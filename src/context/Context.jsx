@@ -1,104 +1,119 @@
-import {createContext, useState} from 'react';
+import { createContext, useState, useEffect } from 'react';
 import run from '../config/gemini';
 
 export const Context = createContext();
 
 const ContextProvider = (props) => {
-    const [input,setInput] = useState("");// to save the input data.
-    const [recentPrompt,setRecentPrompt] = useState("");//when we enter the send button the input will be stored here and we display result here using that input.
-    const [previousPrompt,setPreviousPrompt] = useState([]);//we have declared it as array to save all the input history and to store it in the sidebar.
-    const [showResult,setShowResult] = useState(false);//boolean type once it is true it will hide greet mesage and card showing information.
-    const [loading,setLoading] = useState(false);//if this is true it will load some loading animation after that we will make it as false.
-    const [resultData,setResultData] = useState("");// to display the result on the main tab.
+  const [input, setInput] = useState('');
+  const [recentPrompt, setRecentPrompt] = useState('');
+  const [showResult, setShowResult] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [resultData, setResultData] = useState('');
+  const [userPrompts, setUserPrompts] = useState([]);
 
-    const delayPara =(index,nextword) => { // typing effect helper function...
-        setTimeout(() => {
-          setResultData(prev => prev+nextword);
-          requestAnimationFrame(scrollToBottom);
-        },75*index)
-    };
-
-    // Reset for new chat
-    const newChat =() => {
-      setLoading(false)
-      setShowResult(false)
+  useEffect(() => {
+    const resultElement = document.querySelector('.result');
+    if (resultElement) {
+      resultElement.scrollTop = resultElement.scrollHeight;
     }
-    
-    const scrollToBottom = () => {
-      const resultElement = document.querySelector('.result'); // Ensure this matches the CSS class for your result container
-      if (resultElement) {
-          resultElement.scrollTop = resultElement.scrollHeight;
-      }
+  }, [resultData]);
+
+  const delayPara = (index, nextword) => {
+    setTimeout(() => {
+      setResultData((prev) => prev + nextword);
+    }, 75 * index);
   };
-    // Main function to handle input and processing
-    const onSent = async (prompt) => {
 
-        setResultData(""); // Clear previous results
-        setLoading(true); // Start loading animation
-        setShowResult(true); // Show result area
+  const newChat = () => {
+    setLoading(false);
+    setShowResult(false);
+    setInput('');
+    setResultData('');
+    setRecentPrompt('');
+  };
 
-        let result;
-        if (prompt !== undefined) {
-          result = await run(prompt);  // Fetch result for given prompt
-          setRecentPrompt(prompt);
-        }else{
-          setPreviousPrompt(prev => [...prev,input]);
-          setRecentPrompt(input);
-          result = await run(input);
-        }
-        // setRecentPrompt(input)
-        // setPreviousPrompt(prev => [...prev,input])
-        // const result = await run(input)
+  const onSent = async (prompt) => {
+    setResultData('');
+    setLoading(true);
+    setShowResult(true);
 
-        let responseArray = result.split("**");// split result to process bold text
-        let newResult = "" ;
+    const actualPrompt = (prompt !== undefined ? prompt : input).trim();
 
-        //wrap bold text
-        for (let i = 0;i<responseArray.length;i++){ 
-          if(i===0 || i%2 !== 1){
-            newResult += responseArray[i]; //normal text
-          }  
-          else{
-            newResult += "<b>"+responseArray[i]+"</b>"; //bold text
-          }   
-        }
-        let newResult2 = newResult.split("*").join("</br>");
-        let newResult3 = newResult2.split("```").join("</br>");
-
-        //replace * with line breaks
-        let newResponseArray = newResult3.split(" ");
-        for (let i = 0;i<newResponseArray.length;i++){ 
-          const nextword = newResponseArray[i];
-          delayPara(i,nextword+" ")
-        }
-
-        setTimeout(() => {
-          setResultData(newResponseArray.join(" ")); // Set final result after typing finishes
-          scrollToBottom(); 
-        }, 75 * newResponseArray.length);
-
-        // setResultData(newResult2) //final resut formatting
-        setLoading(false)
-        setInput("")
+    if (!actualPrompt) {
+      setLoading(false);
+      return;
     }
-    
-    const contextValue ={
-        previousPrompt,
-        setPreviousPrompt,
-        onSent,
-        setRecentPrompt,
-        recentPrompt,
-        showResult,
-        loading,
-        resultData,
-        input,
-        setInput,
-        newChat
+
+    if (!prompt) {
+      const username = localStorage.getItem('username');
+
+      if (username) {
+        try {
+          await fetch('http://localhost:8081/api/v1/save-prompt', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              prompt: actualPrompt,
+              username: username,
+            }),
+          });
+        } catch (err) {
+          console.error('Error saving prompt:', err);
+        }
+      }
     }
+
+    setRecentPrompt(actualPrompt);
+
+    try {
+      const result = await run(actualPrompt);
+      let responseArray = result.split('**');
+      let newResult = '';
+
+      for (let i = 0; i < responseArray.length; i++) {
+        newResult += i % 2 === 1 ? `<b>${responseArray[i]}</b>` : responseArray[i];
+      }
+
+      const formatted = newResult.split('*').join('</br>').split('```').join('</br>');
+      const newResponseArray = formatted.split(' ');
+
+      for (let i = 0; i < newResponseArray.length; i++) {
+        delayPara(i, newResponseArray[i] + ' ');
+      }
+
+      setTimeout(() => {
+        setResultData(newResponseArray.join(' '));
+      }, 75 * newResponseArray.length);
+
+    } catch (error) {
+      console.error('Error generating response:', error);
+    }
+
+    setLoading(false);
+    setInput('');
+  };
+
+  const contextValue = {
+    onSent,
+    setRecentPrompt,
+    recentPrompt,
+    showResult,
+    loading,
+    resultData,
+    input,
+    setInput,
+    newChat,
+    userPrompts,
+    setUserPrompts,
+  };
+
   return (
     <Context.Provider value={contextValue}>
-        {props.children}
+      {props.children}
     </Context.Provider>
-  )
-}
+  );
+};
+
 export default ContextProvider;
